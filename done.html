@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css"
+    />
+    <title>Student Registration</title>
+     <link rel="icon" type="image/webp" href="download (1).webp">
+
+  </head>
+
+  <body>
+    <section class="hero is-primary is-bold">
+      <div class="hero-body">
+        <div class="container">
+          <h1 class="title">Student Registration</h1>
+        </div>
+      </div>
+    </section>
+
+    <form id="form" class="container m-4 pl-4">
+      <!-- Name Field -->
+      <div class="field">
+        <label class="label">Name</label>
+        <div class="control">
+          <input
+            class="input"
+            type="text"
+            placeholder="Enter your full name"
+            name="Name"
+            required
+          />
+        </div>
+      </div>
+
+      <!-- Registration Number Field -->
+      <div class="field">
+        <label class="label">Registration Number</label>
+        <div class="control">
+          <input
+            class="input"
+            type="text"
+            placeholder="Enter your registration number"
+            name="RegistrationNumber"
+            required
+          />
+        </div>
+      </div>
+
+      <!-- Submit and Cancel Buttons -->
+      <div class="field is-grouped">
+        <div class="control">
+          <button class="button is-primary" type="submit" id="submit-button">
+            Submit
+          </button>
+        </div>
+        <div class="control">
+          <button
+            class="button is-danger"
+            type="button"
+            onclick="document.getElementById('form').reset();"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div
+      id="message"
+      style="
+        display: none;
+        margin: 20px;
+        padding: 10px;
+        border-radius: 4px;
+        font-weight: bold;
+      "
+    ></div>
+
+    <script>
+      const form = document.getElementById("form");
+      const submitButton = document.getElementById("submit-button");
+      const messageDiv = document.getElementById("message");
+
+      // ✅ Update this to your deployed Apps Script web app URL
+      const scriptURL =
+        "https://script.google.com/macros/s/AKfycbxs3fxrrL_p4TV44lmIcIZdpwPk32pcvmRvjOjSo0UDHAh3IP8sS8BiYaZwBeklcMrA/exec";
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+
+        const regNumber = form.RegistrationNumber.value.trim();
+
+        if (!regNumber) {
+          alert("Please enter your registration number.");
+          return;
+        }
+
+        messageDiv.textContent = "Checking registration...";
+        messageDiv.style.display = "block";
+        messageDiv.style.backgroundColor = "beige";
+        messageDiv.style.color = "black";
+        submitButton.disabled = true;
+        submitButton.classList.add("is-loading");
+
+        try {
+          // Step 1: Check if registration number already exists
+          const checkResponse = await fetch(`${scriptURL}?check=${regNumber}`);
+          const checkData = await checkResponse.json();
+
+          if (checkData.exists) {
+            // Already submitted
+            messageDiv.textContent =
+              "❌ You have already registered. Duplicate submission not allowed.";
+            messageDiv.style.backgroundColor = "#f14668";
+            messageDiv.style.color = "white";
+            submitButton.disabled = false;
+            submitButton.classList.remove("is-loading");
+            return;
+          }
+
+          // Step 2: Submit if not existing
+          const formData = new FormData(this);
+          const formDataObj = {};
+          for (let [key, value] of formData.entries()) {
+            formDataObj[key] = value;
+          }
+
+          const response = await fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify(formDataObj),
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8",
+            },
+          });
+
+          const data = await response.json();
+
+          if (data.status === "success") {
+            messageDiv.textContent =
+              data.message || "✅ Data submitted successfully!";
+            messageDiv.style.backgroundColor = "#48c78e";
+            messageDiv.style.color = "white";
+            form.reset();
+          } else {
+            throw new Error(data.message || "Submission failed");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          messageDiv.textContent = "Error: " + error.message;
+          messageDiv.style.backgroundColor = "#f14668";
+          messageDiv.style.color = "white";
+        } finally {
+          submitButton.disabled = false;
+          submitButton.classList.remove("is-loading");
+
+          setTimeout(() => {
+            messageDiv.textContent = "";
+            messageDiv.style.display = "none";
+          }, 5000);
+        }
+      });
+    </script>
+  </body>
+</html>
