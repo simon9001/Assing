@@ -106,40 +106,72 @@
         font-weight: bold;
       "
     ></div>
-
     <script>
       const form = document.getElementById("form");
       const submitButton = document.getElementById("submit-button");
       const messageDiv = document.getElementById("message");
-
-      // ✅ Update this to your deployed Apps Script web app URL
+    
+      // ✅ Your Google Apps Script Web App URL
       const scriptURL =
         "https://script.google.com/macros/s/AKfycbxYcYaAeFNZzlv6XLdMjQQd-TmW6phLaMXLmrPA-AiIjuC8TXy4n2ni0Mx3AKNdbGgB/exec";
-
+    
       form.addEventListener("submit", async function (e) {
         e.preventDefault();
-
+    
+        const name = form.Name.value.trim();
         const regNumber = form.RegistrationNumber.value.trim();
-
+        const githubUrl = form["Github-url"].value.trim();
+        const liveUrl = form["Live-Url"].value.trim();
+    
+        // ========== CLIENT-SIDE VALIDATIONS ==========
+        if (!name) {
+          alert("Please enter your name.");
+          return;
+        }
+    
         if (!regNumber) {
           alert("Please enter your registration number.");
           return;
         }
-
+    
+        if (!/^B144/i.test(regNumber)) {
+          alert("❌ Registration number must start with 'B144'.");
+          return;
+        }
+    
+        // Validate GitHub repository link
+        const githubPattern = /^https:\/\/github\.com\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+\/?$/;
+        if (!githubPattern.test(githubUrl)) {
+          alert(
+            "❌ Invalid GitHub URL. Please enter a valid repository link (e.g. https://github.com/username/repo-name)"
+          );
+          return;
+        }
+    
+        // Validate GitHub Pages live link
+        const livePattern = /^https:\/\/[A-Za-z0-9_-]+\.github\.io\/[A-Za-z0-9_.-]+\/?$/;
+        if (!livePattern.test(liveUrl)) {
+          alert(
+            "❌ Invalid Live URL. It must be a valid GitHub Pages deployment link (e.g. https://username.github.io/repo-name)"
+          );
+          return;
+        }
+    
+        // Show message and disable button
         messageDiv.textContent = "Checking registration...";
         messageDiv.style.display = "block";
         messageDiv.style.backgroundColor = "beige";
         messageDiv.style.color = "black";
         submitButton.disabled = true;
         submitButton.classList.add("is-loading");
-
+    
         try {
           // Step 1: Check if registration number already exists
           const checkResponse = await fetch(`${scriptURL}?check=${regNumber}`);
           const checkData = await checkResponse.json();
-
+    
           if (checkData.exists) {
-            // Already submitted
+            alert("❌ You have already registered. Duplicate submission not allowed.");
             messageDiv.textContent =
               "❌ You have already registered. Duplicate submission not allowed.";
             messageDiv.style.backgroundColor = "#f14668";
@@ -148,14 +180,15 @@
             submitButton.classList.remove("is-loading");
             return;
           }
-
-          // Step 2: Submit if not existing
+    
+          // Step 2: Prepare data for submission
           const formData = new FormData(this);
           const formDataObj = {};
           for (let [key, value] of formData.entries()) {
-            formDataObj[key] = value;
+            formDataObj[key] = value.trim();
           }
-
+    
+          // Step 3: Send data to backend
           const response = await fetch(scriptURL, {
             method: "POST",
             body: JSON.stringify(formDataObj),
@@ -163,27 +196,31 @@
               "Content-Type": "text/plain;charset=utf-8",
             },
           });
-
+    
           const data = await response.json();
-
+    
           if (data.status === "success") {
-            messageDiv.textContent =
-              data.message || "✅ Data submitted successfully!";
+            alert("✅ " + data.message);
+            messageDiv.textContent = data.message || "✅ Data submitted successfully!";
             messageDiv.style.backgroundColor = "#48c78e";
             messageDiv.style.color = "white";
             form.reset();
           } else {
-            throw new Error(data.message || "Submission failed");
+            alert("❌ " + (data.message || "Submission failed."));
+            messageDiv.textContent = data.message || "❌ Submission failed.";
+            messageDiv.style.backgroundColor = "#f14668";
+            messageDiv.style.color = "white";
           }
         } catch (error) {
           console.error("Error:", error);
+          alert("⚠️ Error: " + error.message);
           messageDiv.textContent = "Error: " + error.message;
           messageDiv.style.backgroundColor = "#f14668";
           messageDiv.style.color = "white";
         } finally {
           submitButton.disabled = false;
           submitButton.classList.remove("is-loading");
-
+    
           setTimeout(() => {
             messageDiv.textContent = "";
             messageDiv.style.display = "none";
@@ -191,5 +228,7 @@
         }
       });
     </script>
+    
+    
   </body>
 </html>
